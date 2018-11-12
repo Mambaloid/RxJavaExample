@@ -4,7 +4,6 @@ import android.os.Bundle;
 import android.support.annotation.Nullable;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
-import android.view.View;
 import android.widget.AutoCompleteTextView;
 import android.widget.Button;
 import android.widget.EditText;
@@ -16,7 +15,6 @@ import com.jakewharton.rxbinding3.widget.RxTextView;
 import java.util.concurrent.TimeUnit;
 
 import io.reactivex.Observable;
-import io.reactivex.Scheduler;
 import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.disposables.CompositeDisposable;
 import io.reactivex.schedulers.Schedulers;
@@ -43,16 +41,23 @@ public class RxJavaActivity extends AppCompatActivity {
 
         compositeDisposable.add(
                 RxView.clicks(buttonSubmit)
+                        .subscribeOn(AndroidSchedulers.mainThread())
+                        .flatMap(aVoid -> Observable.create(emitter -> {
+                            buttonSubmit.setEnabled(false);
+                            Toast.makeText(RxJavaActivity.this, "Запрос начал выполняться!",Toast.LENGTH_SHORT).show();
+                        }))
                         .subscribeOn(Schedulers.io())
-                        .map(aVoid -> {
-                            Log.d("ASDA","Начинаем запрос!"+aVoid.toString());
-                            Toast.makeText(this, emailEditText.getText().toString() + " "
-                                + passwordEditText.getText().toString(), Toast.LENGTH_SHORT).show();
-                            TimeUnit.SECONDS.sleep(5);
-                            return aVoid;
-                        })
+                        .flatMap(aVoid -> Observable.create(emitter -> {
+                            Log.d("BACKGROUND","START");
+                            TimeUnit.SECONDS.sleep(3);
+                            Log.d("BACKGROUND","END");
+                        }))
                         .observeOn(AndroidSchedulers.mainThread())
-                        .subscribe(item -> buttonSubmit.setEnabled(false))
+                        .subscribe(
+                                v -> Toast.makeText(RxJavaActivity.this, "OnNext",Toast.LENGTH_SHORT).show(),
+                                e -> Toast.makeText(RxJavaActivity.this, "OnError",Toast.LENGTH_SHORT).show(),
+                                () -> Toast.makeText(RxJavaActivity.this, "OnComplete",Toast.LENGTH_SHORT).show()
+                        )
         );
     }
 
